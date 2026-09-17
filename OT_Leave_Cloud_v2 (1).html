@@ -164,21 +164,12 @@ function calcOT(typ,rs,re,ai,ao){
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 function ov(show,txt){const el=document.getElementById('ov');el.style.display=show?'flex':'none';if(txt)document.getElementById('ovtxt').textContent=txt;}
 
-// ── File pick ──────────────────────────────────────────
-const // Google Sheets IDs (แก้ได้ที่นี่)
+// ── Google Sheets Config ─────────────────────────────
 const SHEETS={
   OT:{id:'1ILqQoGuaWYJ7UwPErudLJYNg_1D3thj48OV-0HdROG4',gid:'906782245'},
   AT:{id:'16X4GvOqQrdaftZtPaVpzc88jtgN8dQiaIqhLDcDkAJo',gid:'1714443225'}
 };
 function sheetCSV(s){return `https://docs.google.com/spreadsheets/d/${s.id}/export?format=csv&gid=${s.gid}`;}
-});
-function readWB(file){
-  return new Promise((res,rej)=>{
-    const r=new FileReader();
-    r.onload=e=>{ try{res(XLSX.read(new Uint8Array(e.target.result),{type:'array'}));}catch(ex){rej(ex);} };
-    r.onerror=rej; r.readAsArrayBuffer(file);
-  });
-}
 
 // ── Parse ATT file ─────────────────────────────────────
 function parseATT(wb){
@@ -253,6 +244,12 @@ async function go(){
       fetchCSV(sheetCSV(SHEETS.OT),'รายงานขอเอกสาร'),
       fetchCSV(sheetCSV(SHEETS.AT),'เวลาการทำงาน')
     ]);
+    console.log('wbOT sheets:',wbOT.SheetNames,'wbAT sheets:',wbAT.SheetNames);
+    const _testOT=XLSX.utils.sheet_to_json(wbOT.Sheets[wbOT.SheetNames[0]],{header:1,defval:''});
+    const _testAT=XLSX.utils.sheet_to_json(wbAT.Sheets[wbAT.SheetNames[0]],{header:1,defval:''});
+    console.log('OT raw rows:',_testOT.length,'first row:',_testOT[0]);
+    console.log('ATT raw rows:',_testAT.length,'first row:',_testAT[0]);
+    if(_testOT.length<2||_testAT.length<2) throw new Error(`ข้อมูลไม่ครบ: OT=${_testOT.length} rows, ATT=${_testAT.length} rows`);
     ov(true,'สร้าง empMap จาก Attendance...');
     await sleep(30);
 
