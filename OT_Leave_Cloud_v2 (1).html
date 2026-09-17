@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OT & Leave Report — Phi Automation</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',sans-serif;background:#f0f4f8;color:#1e293b;font-size:13px}
+header{background:#1F3864;color:#fff;padding:12px 24px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:50}
+header h1{font-size:15px;font-weight:700}
+.chip{font-size:11px;background:rgba(255,255,255,.18);border-radius:10px;padding:2px 10px}
+#hinfo{margin-left:auto;font-size:11px;opacity:.65}
+.page{max-width:1200px;margin:0 auto;padding:20px 16px}
+
+/* Upload */
+.card{background:#fff;border-radius:10px;padding:24px;box-shadow:0 1px 6px rgba(0,0,0,.07);margin-bottom:16px}
+.up-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.dropbox{border:2px dashed #cbd5e1;border-radius:8px;padding:24px 16px;text-align:center;cursor:pointer;transition:.2s;background:#f8fafc}
+.dropbox:hover{border-color:#3b82f6;background:#eff6ff}
+.dropbox.ready{border-color:#16a34a;border-style:solid;background:#f0fdf4}
+.dropbox input{display:none}
+.dropbox .ico{font-size:28px;margin-bottom:8px}
+.dropbox .ttl{font-weight:700;color:#1e40af;font-size:13px}
+.dropbox .sub{font-size:11px;color:#64748b;margin-top:3px}
+.dropbox .fn{font-size:11px;color:#16a34a;font-weight:600;margin-top:6px;word-break:break-all}
+.btn{display:block;width:100%;padding:12px;background:#1F3864;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer}
+.btn:hover:not(:disabled){background:#2F5496}
+.btn:disabled{background:#94a3b8;cursor:not-allowed}
+#msg{text-align:center;font-size:12px;color:#64748b;margin-top:8px;min-height:16px}
+
+/* Overlay */
+#ov{display:none;position:fixed;inset:0;background:rgba(255,255,255,.88);z-index:100;align-items:center;justify-content:center;flex-direction:column;gap:12px}
+.spin{width:36px;height:36px;border:3px solid #dbeafe;border-top-color:#1F3864;border-radius:50%;animation:sp .6s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+#ovtxt{font-size:13px;font-weight:600;color:#1F3864}
+
+/* Result */
+#res{display:none}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px}
+.kpi{background:#fff;border-radius:8px;padding:12px 14px;border:1px solid #e2e8f0}
+.kpi .k{font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+.kpi .v{font-size:22px;font-weight:700}
+.bar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.bar label{font-size:12px;font-weight:600;color:#1F3864}
+.bar select{border:1px solid #e2e8f0;border-radius:6px;padding:5px 10px;font-size:12px}
+#rl{margin-left:auto;font-size:11px;color:#64748b}
+.tabs{display:flex;gap:1px;border-bottom:2px solid #e2e8f0;margin-bottom:12px;overflow-x:auto}
+.tab{background:none;border:none;padding:8px 14px;font-size:12px;font-weight:600;color:#64748b;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;white-space:nowrap}
+.tab.on{color:#1F3864;border-bottom-color:#1ABC9C}
+.tw{overflow-x:auto;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+table{width:100%;border-collapse:collapse;font-size:12px;background:#fff;min-width:800px}
+th{background:#1F3864;color:#fff;padding:8px 10px;text-align:left;font-size:11px;white-space:nowrap}
+th.r,td.r{text-align:right}
+th.c,td.c{text-align:center}
+td{padding:7px 10px;border-bottom:1px solid #f1f5f9}
+tr:nth-child(even) td{background:#f8fafc}
+tr:hover td{background:#eff6ff}
+.wkr td{background:#dbeafe!important;color:#1e40af;font-weight:700}
+.grand td{background:#1ABC9C!important;color:#fff;font-weight:700}
+tfoot td{background:#1F3864;color:#fff;font-weight:700;padding:8px 10px}
+.p{border-radius:10px;padding:2px 7px;font-size:11px;font-weight:700}
+.pg{background:#dcfce7;color:#16a34a}
+.py{background:#fef9c3;color:#a16207}
+.pr{background:#fee2e2;color:#dc2626}
+.ra{color:#dc2626;font-weight:700}
+.rl{color:#ea580c;font-weight:700}
+.db{background:#dbeafe;color:#1e40af;border-radius:8px;padding:1px 8px;font-size:10px;font-weight:700;display:inline-block}
+</style>
+</head>
+<body>
+<div id="ov" style="display:none;position:fixed;inset:0;background:rgba(255,255,255,.88);z-index:100;display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px">
+  <div class="spin"></div><div id="ovtxt">กำลังประมวลผล...</div>
+</div>
+<header>
+  <span style="font-size:20px">📊</span><h1>OT & Leave Report</h1>
+  <span class="chip">Phi Automation Co., Ltd.</span>
+  <span id="hinfo"></span>
+</header>
+<div class="page">
+
+<div class="card" id="upSec">
+  <div style="text-align:center;margin-bottom:16px">
+    <div style="font-size:18px;font-weight:700;color:#1F3864">📊 OT & Leave Report</div>
+    <div style="font-size:12px;color:#64748b;margin-top:4px">Phi Automation Co., Ltd.</div>
+  </div>
+  <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:14px 16px;margin-bottom:16px;font-size:13px;color:#166534">
+    <div style="font-weight:600;margin-bottom:4px">✅ เชื่อมต่อ Google Sheets แล้ว</div>
+    <div>รายงานขอเอกสาร · เวลาการทำงาน</div>
+  </div>
+  <button class="btn" id="btnRun" onclick="go()">▶  โหลดข้อมูลและคำนวณ</button>
+  <div id="msg" style="margin-top:8px;text-align:center;font-size:12px;color:#64748b">กดปุ่มเพื่อดึงข้อมูลล่าสุดจาก Google Sheets</div>
+</div>
+
+<div id="res">
+  <div class="kpis" id="kpis"></div>
+  <div class="bar">
+    <label>แผนก</label><select id="sdept" onchange="goTab(this.value)"></select>
+    <label style="margin-left:8px">Week</label><select id="sweek" onchange="render()"></select>
+    <span id="rl"></span>
+  </div>
+  <div class="tabs" id="tabs"></div>
+  <div id="ct"></div>
+</div>
+
+</div>
+<script>
+// ── Config ────────────────────────────────────────────
+const DEPTS=['Design','Electrical & Software','Production','Assembly','Beta','Gamma','Admin'];
+const DMAP={'Electrical & Softwere':'Electrical & Software','Electrical & softwere':'Electrical & Software','admin':'Admin'};
+const EMO={Design:'📐','Electrical & Software':'⚡',Production:'🏭',Assembly:'🔧',Beta:'🅱️',Gamma:'🔬',Admin:'🏢'};
+const RESIGNED=new Set(['0276','0287','0282','0291','0288','0261','0256','0273','0286','0289','0244','0268','0298','0278','0275','0305','0306']);
+const STAT_OK=new Set(['อนุมัติ','รออนุมัติ','ตรวจสอบอีกครั้ง']);
+const LEAVE_T=new Set(['ลาป่วย','ลากิจ','ลาพักร้อน']);
+const HOLS=new Set([
+  // วันหยุดประจำปี 2025
+  '2025-01-01','2025-04-14','2025-04-15','2025-04-16',
+  '2025-05-01','2025-05-12','2025-06-03','2025-07-10',
+  '2025-07-28','2025-08-12','2025-10-13','2025-12-05','2025-12-31',
+  // วันหยุดประจำปี 2026
+  '2026-01-01','2026-03-03','2026-04-13','2026-04-14','2026-04-15','2026-05-01','2026-06-03','2026-07-28','2026-08-12','2026-10-13','2026-10-23','2026-12-07','2026-12-31']);
+const SAT_OFF=new Date('2026-09-12');
+const TGT=12, LATE=481;
+
+// ── Helpers ───────────────────────────────────────────
+const t2m=s=>{if(!s||!s.includes(':'))return null;const[h,m]=s.split(':').map(Number);return isNaN(h)?null:h*60+m;};
+const f1=n=>((+n)||0).toFixed(1);
+const pad=n=>String(n).padStart(2,'0');
+function isHol(d){return HOLS.has(d.toISOString().slice(0,10));}
+function isWorkSat(d){if(d.getDay()!==6)return false;const days=Math.round((d-SAT_OFF)/86400000);const w=Math.floor(days/7);return((w%2)+2)%2===1;}
+function isWork(d){const dw=d.getDay();if(isHol(d))return false;if(dw<5)return true;if(dw===6)return isWorkSat(d);return false;}
+function isoWk(d){const t=new Date(d);t.setHours(0,0,0,0);t.setDate(t.getDate()+3-(t.getDay()+6)%7);const j=new Date(t.getFullYear(),0,4);return{yr:t.getFullYear(),wk:1+Math.round(((t-j)/864e5+j.getDay()+1-1)/7)};}
+function wkFrom(yr,wk,day){const s=new Date(yr,0,1+((wk-1)*7));const dw=s.getDay()||7;dw<=4?s.setDate(s.getDate()-dw+1):s.setDate(s.getDate()+8-dw);s.setDate(s.getDate()+(day-1));return s;}
+function wkLabel(yr,wk){const m=wkFrom(yr,wk,1),s=wkFrom(yr,wk,7);const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];return `W${pad(wk)} | ${pad(m.getDate())} ${mo[m.getMonth()]}–${pad(s.getDate())} ${mo[s.getMonth()]} ${s.getFullYear()}`;}
+function pdate(txt){// parse "DD/MM/YYYY" from text
+  if(!txt)return null;
+  const m=txt.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+  if(!m)return null;
+  const d=new Date(`${m[3]}-${m[2]}-${m[1]}`);
+  return isNaN(d)?null:d;
+}
+function ptimes(txt){return (txt||'').match(/\d{2}:\d{2}/g)||[];}
+function calcOT(typ,rs,re,ai,ao){
+  const s=t2m(rs),e=t2m(re);if(s===null||e===null)return 0;
+  const out=t2m(ao),end=out&&out>0?Math.min(e,out):e;
+  const inm=t2m(ai)||0;
+  let pen=0;if(inm>480){const l=inm-480;pen=l<=30?30:l<=60?60:l<=120?120:180;}
+  let dur=typ==='x1.5'?end-(1050+pen):end-t2m(rs);
+  if(typ!=='x1.5'&&t2m(rs)<=720&&end>=780)dur-=60;
+  return Math.max(0,Math.floor(dur/30)*0.5);
+}
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function ov(show,txt){const el=document.getElementById('ov');el.style.display=show?'flex':'none';if(txt)document.getElementById('ovtxt').textContent=txt;}
+
+// ── File pick ──────────────────────────────────────────
+const PROXY='https://script.google.com/macros/s/AKfycbxQgd836NGjlFrdgboCaTE_7nhglON15jVR1D0iIOXbBIoyRP6yG9HWk61EbQsztwavEQ/exec';
+
+// ── Parse ATT file ─────────────────────────────────────
+function parseATT(wb){
+  const ws=wb.Sheets[wb.SheetNames[0]];
+  const raw=XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:''});
+  // Find header row
+  let hi=raw.findIndex(r=>r.some(c=>String(c).includes('รหัสพนักงาน')));
+  if(hi<0)hi=1;
+  const hdrs=raw[hi].map(h=>String(h).trim());
+  const iEid=hdrs.indexOf('รหัสพนักงาน'),iName=hdrs.findIndex(h=>h.includes('ชื่อ')),
+        iDate=hdrs.findIndex(h=>h.includes('วันที่')),iIN=hdrs.indexOf('IN'),iOUT=hdrs.indexOf('OUT'),
+        iPos=hdrs.findIndex(h=>h.includes('ตำแหน่ง'));
+  let dept=null; const rows=[];
+  for(let i=hi+1;i<raw.length;i++){
+    const r=raw[i]; const f=String(r[0]||'').trim();
+    if(f.includes('แผนก:')){ dept=DMAP[f.replace('แผนก:','').trim()]||f.replace('แผนก:','').trim(); continue; }
+    if(isNaN(+f)||f==='')continue;
+    const eid=String(r[iEid]||'').trim().padStart(4,'0');
+    if(!eid||eid==='0000')continue;
+    rows.push({eid,name:String(r[iName]||'').trim(),dept,
+               date:String(r[iDate]||'').trim(),
+               IN:String(r[iIN]||'').trim(),OUT:String(r[iOUT]||'').trim(),
+               pos:iPos>=0?String(r[iPos]||'').trim():''});
+  }
+  return rows;
+}
+
+// ── Parse OT file ──────────────────────────────────────
+function parseOT(wb){
+  const ws=wb.Sheets[wb.SheetNames[0]];
+  const raw=XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:''});
+  let hi=raw.findIndex(r=>r.some(c=>String(c).includes('รหัสพนักงาน')));
+  if(hi<0)hi=1;
+  const hdrs=raw[hi].map(h=>String(h).trim());
+  const get=(r,h)=>String(r[hdrs.indexOf(h)]||'').trim();
+  const rows=[];
+  for(let i=hi+1;i<raw.length;i++){
+    const r=raw[i]; if(r.every(c=>!c))continue;
+    const eid=get(r,'รหัสพนักงาน').padStart(4,'0');
+    if(!eid||eid==='0000')continue;
+    rows.push({eid,typ:get(r,'ประเภท'),stat:get(r,'สถานะ'),
+               det:get(r,'รายละเอียด'),dateField:get(r,'วันที่')});
+  }
+  return rows;
+}
+
+// ── Main ───────────────────────────────────────────────
+let G={};let CUR='dashboard';
+
+async function go(){
+  ov(true,'กำลังอ่านไฟล์...');
+  await sleep(50);
+  try{
+    const fetchCSV=async(which,name)=>{
+      const url=PROXY+'?sheet='+which;
+      ov(true,'กำลังดึง '+name+'...');
+      console.log('Fetching',name,'from',url);
+      const r=await fetch(url);
+      console.log(name,'status:',r.status,'type:',r.headers.get('content-type'));
+      if(!r.ok) throw new Error(name+' ดึงไม่ได้: HTTP '+r.status);
+      const txt=await r.text();
+      console.log(name,'size:',txt.length,'first100:',txt.slice(0,100));
+      if(txt.length<10) throw new Error(name+': ได้ข้อมูลว่าง');
+      if(txt.trim().startsWith('<')) throw new Error(name+': ได้รับ HTML แทน CSV — ตรวจสอบ Apps Script');
+      return XLSX.read(txt,{type:'string',raw:false});
+    };
+    const[wbOT,wbAT]=await Promise.all([
+      fetchCSV('OT','รายงานขอเอกสาร'),
+      fetchCSV('AT','เวลาการทำงาน')
+    ]);
+    ov(true,'สร้าง empMap จาก Attendance...');
+    await sleep(30);
+
+    const attRows=parseATT(wbAT);
+    // empMap from ATT — source of truth for name+dept
+    const empMap=new Map();   // eid→{name,nick,dept}
+    const empWks=new Map();   // eid→Set of "yr|wk" with attendance
+    const attMap=new Map();   // "eid|YYYY-MM-DD"→{IN,OUT}
+    const attPres=new Set();  // "eid|YYYY-MM-DD" with real IN
+    const empFirst=new Map(),empLast=new Map(); // eid→first Date with IN
+
+    for(const r of attRows){
+      const{eid,name,dept}=r;
+      const pos=r.pos||'';
+      if(RESIGNED.has(eid)||!DEPTS.includes(dept))continue;
+      if(pos==='หัวหน้างาน'||pos.includes('ผู้จัดการ')||pos.toLowerCase().includes('manager'))continue;
+      if(!empMap.has(eid)){
+        const nm=r.name.replace(/\s*\([^)]*\)/,'').trim();
+        const nkM=r.name.match(/\(([^)]+)\)/);
+        empMap.set(eid,{name:nm,nick:nkM?nkM[1]:'',dept});
+      }
+      // parse date "DD/MM/YYYY"
+      const dp=r.date.split('/');
+      if(dp.length<3)continue;
+      const dt=new Date(`${dp[2]}-${dp[1].padStart(2,'0')}-${dp[0].padStart(2,'0')}`);
+      if(isNaN(dt))continue;
+      const dk=dt.toISOString().slice(0,10);
+      attMap.set(eid+'|'+dk,{IN:r.IN,OUT:r.OUT});
+      if(r.IN&&r.IN!='NaN'&&r.IN!='nan'&&r.IN!=''&&r.IN!='-'){
+        attPres.add(eid+'|'+dk);
+        if(!empFirst.has(eid)||dt<empFirst.get(eid))empFirst.set(eid,dt);
+        if(!empLast.has(eid)||dt>empLast.get(eid))empLast.set(eid,dt);
+        if(!empLast.has(eid)||dt>empLast.get(eid))empLast.set(eid,dt);
+        const{yr,wk}=isoWk(dt);
+        if(!empWks.has(eid))empWks.set(eid,new Set());
+        empWks.get(eid).add(`${yr}|${wk}`);
+      }
+    }
+
+    ov(true,'คำนวณ OT & การลา...');
+    await sleep(30);
+
+    const otRows=parseOT(wbOT);
+    const otAgg=new Map(),lvAgg=new Map();
+    const lvDays=new Set(); // "eid|dk" approved leave
+    const otDays=new Set(); // "eid|dk" has OT request
+    const allWkSet=new Set();
+
+    // Build all weeks from attPres first
+    for(const k of attPres){const dt=new Date(k.split('|')[1]);const{yr,wk}=isoWk(dt);allWkSet.add(`${yr}|${wk}`);}
+
+    for(const r of otRows){
+      const{eid,typ,stat,det,dateField}=r;
+      if(!empMap.has(eid))continue; // not in our target employees
+      if(!STAT_OK.has(stat))continue;
+      const dept=empMap.get(eid).dept; // USE EMPMAP DEPT!
+      const dt=pdate(det);
+      if(!dt)continue;
+      const dk=dt.toISOString().slice(0,10);
+      const{yr,wk}=isoWk(dt);
+      const times=ptimes(det);
+      const k=`${eid}|${dept}|${yr}|${wk}`;
+      allWkSet.add(`${yr}|${wk}`);
+
+      if(typ.includes('โอที')){
+        const ot=typ.includes('x1.5')?'x1.5':'x1.0';
+        const att=attMap.get(eid+'|'+dk)||{IN:'',OUT:''};
+        const hrs=calcOT(ot,times[0],times[1],att.IN,att.OUT);
+        const v=otAgg.get(k)||{ot15:0,ot10:0};
+        ot==='x1.5'?v.ot15+=hrs:v.ot10+=hrs;
+        otAgg.set(k,v);
+        otDays.add(eid+'|'+dk);
+      } else if(LEAVE_T.has(typ)){
+        // calc days
+        let days=1;
+        const sm=t2m(times[0]||'08:00'),em=t2m(times[1]||'17:00');
+        if(sm!==null&&em!==null)days=(em-sm)>=540?1:0.5;
+        // multi-day from dateField
+        const dps=dateField.match(/(\d{2})\/(\d{2})\/(\d{4})/g);
+        if(dps&&dps.length>=2){
+          const d1=new Date(`${dps[0].split('/')[2]}-${dps[0].split('/')[1]}-${dps[0].split('/')[0]}`);
+          const d2=new Date(`${dps[1].split('/')[2]}-${dps[1].split('/')[1]}-${dps[1].split('/')[0]}`);
+          if(!isNaN(d1)&&!isNaN(d2)){days=Math.max(1,Math.round((d2-d1)/864e5)+1);}
+          for(let d=new Date(d1);d<=d2;d.setDate(d.getDate()+1))lvDays.add(eid+'|'+d.toISOString().slice(0,10));
+        } else lvDays.add(eid+'|'+dk);
+        if(stat==='อนุมัติ'){
+          const v=lvAgg.get(k)||{ลาป่วย:0,ลากิจ:0,ลาพักร้อน:0};
+          v[typ]=(v[typ]||0)+days; lvAgg.set(k,v);
+        }
+      }
+    }
+
+    ov(true,'คำนวณขาดงาน & มาสาย...');
+    await sleep(30);
+
+    const allDts=[...attPres].map(k=>new Date(k.split('|')[1]));
+    const minD=new Date(Math.min(...allDts)),maxD=new Date(Math.max(...allDts));
+    const absAgg=new Map(),lateAgg=new Map();
+
+    for(const[eid,info]of empMap){
+      const fd=empFirst.get(eid)||minD;
+      const ld=empLast.get(eid)||maxD;
+      // Stop at last attendance + 14 days grace (covers weekends/holidays after last workday)
+      const loopEnd=new Date(ld); // stop at last attendance date exactly
+      for(let d=new Date(fd);d<=loopEnd;d.setDate(d.getDate()+1)){
+        const dk=d.toISOString().slice(0,10);
+        const{yr,wk}=isoWk(d);
+        const k=`${eid}|${info.dept}|${yr}|${wk}`;
+        // Absence
+        if(isWork(d)&&!attPres.has(eid+'|'+dk)&&!lvDays.has(eid+'|'+dk)){
+          absAgg.set(k,(absAgg.get(k)||0)+1);
+        }
+        // Late: Mon-Fri only, not leave day, not OT day
+        const dw=d.getDay();
+        if(dw>=1&&dw<=5&&!isHol(d)&&!lvDays.has(eid+'|'+dk)&&!otDays.has(eid+'|'+dk)){
+          const att=attMap.get(eid+'|'+dk);
+          const inm=t2m(att?.IN);
+          if(inm!==null&&inm>=LATE)lateAgg.set(k,(lateAgg.get(k)||0)+1);
+        }
+      }
+    }
+
+    const allWks=[...allWkSet].map(s=>{const[yr,wk]=s.split('|').map(Number);return{yr,wk};})
+      .sort((a,b)=>a.yr!==b.yr?a.yr-b.yr:a.wk-b.wk);
+
+    G={empMap,otAgg,lvAgg,absAgg,lateAgg,allWks,empWks,minD,maxD};
+    buildUI();
+    ov(false);
+
+  }catch(err){
+    ov(false);
+    document.getElementById('msg').innerHTML='<span style="color:#dc2626;font-weight:600">❌ '+err.message+'</span>';
+    console.error(err);
+  }
+}
+
+// ── Build UI ──────────────────────────────────────────
+function buildUI(){
+  document.getElementById('upSec').style.display='none';
+  document.getElementById('res').style.display='block';
+  const{allWks,minD,maxD,empMap}=G;
+  const fmt=d=>`${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`;
+  document.getElementById('rl').textContent=`${fmt(minD)} – ${fmt(maxD)} | ${allWks.length} สัปดาห์`;
+  document.getElementById('hinfo').textContent=`${allWks.length} weeks | ${empMap.size} employees`;
+  // week selector
+  const sw=document.getElementById('sweek');
+  sw.innerHTML='<option value="ALL">⭐ All Weeks</option>';
+  allWks.forEach(({yr,wk})=>sw.innerHTML+=`<option value="${yr}|${wk}">${wkLabel(yr,wk)}</option>`);
+  if(allWks.length){const{yr,wk}=allWks[allWks.length-1];sw.value=`${yr}|${wk}`;}
+  // dept tabs
+  const sd=document.getElementById('sdept'),tb=document.getElementById('tabs');
+  sd.innerHTML='<option value="dashboard">📊 Dashboard</option>';
+  tb.innerHTML='<button class="tab on" data-t="dashboard" onclick="goTab(\'dashboard\')">📊 Dashboard</button>';
+  DEPTS.forEach(d=>{
+    sd.innerHTML+=`<option value="${d}">${EMO[d]} ${d}</option>`;
+    tb.innerHTML+=`<button class="tab" data-t="${d}" onclick="goTab('${d}')">${EMO[d]} ${d}</button>`;
+  });
+  CUR='dashboard'; render();
+}
+function goTab(t){
+  CUR=t; document.getElementById('sdept').value=t;
+  document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
+  render();
+}
+function render(){CUR==='dashboard'?drawDash():drawDept(CUR);}
+
+// ── Dashboard ─────────────────────────────────────────
+function drawDash(){
+  const{empMap,otAgg,lvAgg,absAgg,lateAgg,allWks}=G;
+  const wf=document.getElementById('sweek').value;
+  const wks=wf==='ALL'?allWks:allWks.filter(({yr,wk})=>{const[y,w]=wf.split('|').map(Number);return yr===y&&wk===w;});
+  let tOT=0,tLV=0,tAB=0,tLT=0;
+  const rows=DEPTS.map(dept=>{
+    const emps=[...empMap.keys()].filter(id=>empMap.get(id).dept===dept&&!RESIGNED.has(id));
+    const n=emps.length; let o15=0,o10=0,sk=0,pr=0,vc=0,ab=0,lt=0;
+    emps.forEach(eid=>wks.forEach(({yr,wk})=>{
+      const k=`${eid}|${dept}|${yr}|${wk}`;
+      const ov=otAgg.get(k)||{};o15+=ov.ot15||0;o10+=ov.ot10||0;
+      const lv=lvAgg.get(k)||{};sk+=lv['ลาป่วย']||0;pr+=lv['ลากิจ']||0;vc+=lv['ลาพักร้อน']||0;
+      ab+=absAgg.get(k)||0;lt+=lateAgg.get(k)||0;
+    }));
+    const tot=o15+o10,tgt=TGT*n*(wks.length||1),pct=tgt>0?tot/tgt:0;
+    tOT+=tot;tLV+=sk+pr+vc;tAB+=ab;tLT+=lt;
+    const pc=pct>=1?'pg':pct>=0.5?'py':'pr';
+    return`<tr><td><span class="db">${EMO[dept]} ${dept}</span></td><td class="c">${n}</td>
+      <td class="r">${f1(o15)}</td><td class="r">${f1(o10)}</td>
+      <td class="r" style="font-weight:700">${f1(tot)}</td>
+      <td class="r" style="color:#94a3b8">${f1(tgt)}</td>
+      <td class="c"><span class="p ${pc}">${Math.round(pct*100)}%</span></td>
+      <td class="c">${f1(sk)}</td><td class="c">${f1(pr)}</td><td class="c">${f1(vc)}</td>
+      <td class="c ${ab>0?'ra':''}">${ab}</td><td class="c ${lt>0?'rl':''}">${lt}</td></tr>`;
+  }).join('');
+  document.getElementById('kpis').innerHTML=`
+    <div class="kpi"><div class="k">Active Employees</div><div class="v">${G.empMap.size}</div></div>
+    <div class="kpi"><div class="k">รวม OT (ชม.)</div><div class="v" style="color:#1ABC9C">${f1(tOT)}</div></div>
+    <div class="kpi"><div class="k">วันลา</div><div class="v" style="color:#2F5496">${f1(tLV)}</div></div>
+    <div class="kpi"><div class="k">ขาดงาน</div><div class="v" style="color:#dc2626">${tAB}</div></div>
+    <div class="kpi"><div class="k">มาสาย</div><div class="v" style="color:#ea580c">${tLT}</div></div>`;
+  document.getElementById('ct').innerHTML=`<div class="tw"><table>
+    <thead><tr><th>แผนก</th><th class="c">คน</th><th class="r">OT x1.5</th><th class="r">OT x1.0</th>
+      <th class="r">Total OT</th><th class="r">Target</th><th class="c">%</th>
+      <th class="c">ป่วย</th><th class="c">กิจ</th><th class="c">พักร้อน</th>
+      <th class="c">ขาดงาน</th><th class="c">มาสาย</th></tr></thead>
+    <tbody>${rows}</tbody>
+    <tfoot><tr><td>รวม</td><td class="c">${G.empMap.size}</td><td colspan="5"></td>
+      <td colspan="3"></td><td class="c">${tAB}</td><td class="c">${tLT}</td></tr></tfoot>
+  </table></div>`;
+}
+
+// ── Dept ──────────────────────────────────────────────
+function drawDept(dept){
+  const{empMap,otAgg,lvAgg,absAgg,lateAgg,allWks,empWks}=G;
+  const wf=document.getElementById('sweek').value;
+  const nW=allWks.length||1;
+  const emps=[...empMap.entries()].filter(([id,e])=>e.dept===dept&&!RESIGNED.has(id))
+    .sort((a,b)=>a[1].name.localeCompare(b[1].name,'th'));
+  const wkList=wf==='ALL'?allWks:allWks.filter(({yr,wk})=>{const[y,w]=wf.split('|').map(Number);return yr===y&&wk===w;});
+
+  // Grand totals over all weeks
+  let gO15=0,gO10=0,gSk=0,gPr=0,gVc=0,gAb=0,gLt=0;
+  const eT=new Map();
+  emps.forEach(([eid])=>{
+    let o15=0,o10=0,sk=0,pr=0,vc=0,ab=0,lt=0;
+    allWks.forEach(({yr,wk})=>{
+      const k=`${eid}|${dept}|${yr}|${wk}`;
+      const ov=otAgg.get(k)||{};o15+=ov.ot15||0;o10+=ov.ot10||0;
+      const lv=lvAgg.get(k)||{};sk+=lv['ลาป่วย']||0;pr+=lv['ลากิจ']||0;vc+=lv['ลาพักร้อน']||0;
+      ab+=absAgg.get(k)||0;lt+=lateAgg.get(k)||0;
+    });
+    eT.set(eid,{o15,o10,tot:o15+o10,sk,pr,vc,ab,lt});
+    gO15+=o15;gO10+=o10;gSk+=sk;gPr+=pr;gVc+=vc;gAb+=ab;gLt+=lt;
+  });
+
+  let rows='';
+  if(wf==='ALL'){
+    emps.forEach(([eid,info])=>{
+      const t=eT.get(eid)||{};
+      const tgt=TGT*nW,pct=tgt>0?(t.tot||0)/tgt:0;
+      const pc=pct>=1?'pg':pct>=0.5?'py':'pr';
+      rows+=`<tr><td style="color:#94a3b8;font-size:10px">All</td>
+        <td class="c" style="font-size:10px;color:#94a3b8">${eid}</td>
+        <td>${info.name}</td><td class="c">${info.nick}</td>
+        <td class="r">${f1(t.o15||0)}</td><td class="r">${f1(t.o10||0)}</td>
+        <td class="r" style="font-weight:700">${f1(t.tot||0)}</td>
+        <td class="r" style="color:#94a3b8">${f1(tgt)}</td>
+        <td class="c"><span class="p ${pc}">${Math.round(pct*100)}%</span></td>
+        <td class="c">${f1(t.sk||0)}</td><td class="c">${f1(t.pr||0)}</td><td class="c">${f1(t.vc||0)}</td>
+        <td class="c" style="font-weight:700">${f1((t.sk||0)+(t.pr||0)+(t.vc||0))}</td>
+        <td class="c ${(t.ab||0)>0?'ra':''}">${t.ab||0}</td>
+        <td class="c ${(t.lt||0)>0?'rl':''}">${t.lt||0}</td></tr>`;
+    });
+  } else {
+    wkList.forEach(({yr,wk})=>{
+      const wl=wkLabel(yr,wk),wkKey=`${yr}|${wk}`;
+      // only employees with attendance this week
+      const activeEmps=emps.filter(([eid])=>(empWks.get(eid)||new Set()).has(wkKey));
+      let wO15=0,wO10=0,wSk=0,wPr=0,wVc=0,wAb=0,wLt=0;
+      activeEmps.forEach(([eid,info])=>{
+        const k=`${eid}|${dept}|${yr}|${wk}`;
+        const ov=otAgg.get(k)||{ot15:0,ot10:0};
+        const lv=lvAgg.get(k)||{};
+        const ab=absAgg.get(k)||0,lt=lateAgg.get(k)||0;
+        const sk=lv['ลาป่วย']||0,pr=lv['ลากิจ']||0,vc=lv['ลาพักร้อน']||0;
+        const tot=ov.ot15+ov.ot10,pct=TGT>0?tot/TGT:0;
+        const pc=pct>=1?'pg':pct>=0.5?'py':'pr';
+        rows+=`<tr><td style="font-size:10px;color:#1e40af">${wl}</td>
+          <td class="c" style="font-size:10px;color:#94a3b8">${eid}</td>
+          <td>${info.name}</td><td class="c">${info.nick}</td>
+          <td class="r">${f1(ov.ot15)}</td><td class="r">${f1(ov.ot10)}</td>
+          <td class="r" style="font-weight:700">${f1(tot)}</td>
+          <td class="r" style="color:#94a3b8">${f1(TGT)}</td>
+          <td class="c"><span class="p ${pc}">${Math.round(pct*100)}%</span></td>
+          <td class="c">${f1(sk)}</td><td class="c">${f1(pr)}</td><td class="c">${f1(vc)}</td>
+          <td class="c" style="font-weight:700">${f1(sk+pr+vc)}</td>
+          <td class="c ${ab>0?'ra':''}">${ab}</td>
+          <td class="c ${lt>0?'rl':''}">${lt}</td></tr>`;
+        wO15+=ov.ot15;wO10+=ov.ot10;wSk+=sk;wPr+=pr;wVc+=vc;wAb+=ab;wLt+=lt;
+      });
+      const wTot=wO15+wO10,wTgt=TGT*activeEmps.length,wPct=wTgt>0?wTot/wTgt:0;
+      const wPc=wPct>=1?'pg':wPct>=0.5?'py':'pr';
+      rows+=`<tr class="wkr"><td colspan="4">▶ ${wl} (${activeEmps.length} คน)</td>
+        <td class="r">${f1(wO15)}</td><td class="r">${f1(wO10)}</td>
+        <td class="r">${f1(wTot)}</td><td class="r">${f1(wTgt)}</td>
+        <td class="c"><span class="p ${wPc}">${Math.round(wPct*100)}%</span></td>
+        <td class="c">${f1(wSk)}</td><td class="c">${f1(wPr)}</td><td class="c">${f1(wVc)}</td>
+        <td class="c">${f1(wSk+wPr+wVc)}</td>
+        <td class="c ${wAb>0?'ra':''}">${wAb}</td>
+        <td class="c ${wLt>0?'rl':''}">${wLt}</td></tr>`;
+    });
+  }
+
+  const gTot=gO15+gO10,gTgt=TGT*emps.length*(wf==='ALL'?nW:1);
+  const gPct=gTgt>0?gTot/gTgt:0,gPc=gPct>=1?'pg':gPct>=0.5?'py':'pr';
+  document.getElementById('kpis').innerHTML=`
+    <div class="kpi"><div class="k">${EMO[dept]} ${dept}</div><div class="v">${emps.length} คน</div></div>
+    <div class="kpi"><div class="k">Total OT</div><div class="v" style="color:#1ABC9C">${f1(gTot)}</div></div>
+    <div class="kpi"><div class="k">วันลา</div><div class="v" style="color:#2F5496">${f1(gSk+gPr+gVc)}</div></div>
+    <div class="kpi"><div class="k">ขาดงาน</div><div class="v" style="color:#dc2626">${gAb}</div></div>
+    <div class="kpi"><div class="k">มาสาย</div><div class="v" style="color:#ea580c">${gLt}</div></div>`;
+  document.getElementById('ct').innerHTML=`<div class="tw"><table>
+    <thead><tr><th>Week</th><th class="c">ID</th><th>ชื่อ</th><th class="c">ชื่อเล่น</th>
+      <th class="r">OT x1.5</th><th class="r">OT x1.0</th>
+      <th class="r">Total OT</th><th class="r">Target</th><th class="c">%</th>
+      <th class="c">ป่วย</th><th class="c">กิจ</th><th class="c">พักร้อน</th>
+      <th class="c">รวมลา</th><th class="c">ขาดงาน</th><th class="c">มาสาย</th></tr></thead>
+    <tbody>${rows||'<tr><td colspan="15" style="text-align:center;color:#94a3b8;padding:20px">ไม่มีพนักงานที่มีการลงเวลาใน Week นี้</td></tr>'}</tbody>
+    <tfoot class="grand"><tr><td colspan="4">★ Grand Total</td>
+      <td class="r">${f1(gO15)}</td><td class="r">${f1(gO10)}</td>
+      <td class="r">${f1(gTot)}</td><td class="r">${f1(gTgt)}</td>
+      <td class="c"><span class="p ${gPc}">${Math.round(gPct*100)}%</span></td>
+      <td class="c">${f1(gSk)}</td><td class="c">${f1(gPr)}</td><td class="c">${f1(gVc)}</td>
+      <td class="c">${f1(gSk+gPr+gVc)}</td>
+      <td class="c ${gAb>0?'ra':''}">${gAb}</td>
+      <td class="c ${gLt>0?'rl':''}">${gLt}</td></tr></tfoot>
+  </table></div>`;
+}
+</script>
+<script>window.addEventListener("load",()=>setTimeout(go,500));</script>
+</body>
+</html>
